@@ -1,0 +1,53 @@
+body {
+    font-family: Arial, sans-serif;
+    background: #0a0a0a;
+    color: #fff;
+    margin: 0;
+    padding: 20px;
+}
+.container {
+    max-width: 800px;
+    margin: auto;
+}
+.card {
+    background: #1e1e1e;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+input, button {
+    padding: 10px;
+    margin: 5px;
+    border: none;
+    border-radius: 5px;
+}
+input {
+    width: calc(100% - 22px);
+    background: #333;
+    color: white;
+}
+button {
+    background: #00adb5;
+    color: white;
+    cursor: pointer;
+}
+button:hover {
+    background: #008c92;
+}
+.channel-item {
+    background: #2a2a2a;
+    padding: 10px;
+    margin: 5px 0;
+    border-radius: 5px;
+    display: flex;
+    justify-content: space-between;
+}
+.delete-btn {
+    background: red;
+}
+pre {
+    background: #2a2a2a;
+    padding: 10px;
+    border-radius: 5px;
+    overflow-x: auto;
+}
