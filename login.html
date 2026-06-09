@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPTV Panel - Giriş</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container { max-width: 450px; width: 100%; }
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        h1 { text-align: center; color: #333; margin-bottom: 10px; font-size: 28px; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 30px; font-size: 14px; }
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            margin: 10px 0;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+        input:focus { outline: none; border-color: #667eea; }
+        button {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        .success {
+            background: #efe;
+            color: #3c3;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .info { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>📺 IPTV Panel</h1>
+            <div class="subtitle">Giriş yap veya hesap oluştur</div>
+            <div id="message"></div>
+            <input type="email" id="email" placeholder="E-posta adresiniz">
+            <input type="password" id="password" placeholder="Şifreniz (min. 6 karakter)">
+            <button class="btn-primary" onclick="login()">🔑 Giriş Yap</button>
+            <button class="btn-secondary" onclick="signup()">📝 Yeni Hesap Oluştur</button>
+            <div class="info">💡 İpucu: Test için istediğiniz e-posta ve şifreyle kayıt olabilirsiniz.</div>
+        </div>
+    </div>
+    <script>
+        // ⚠️ SUPABASE BİLGİLERİNİZ (KENDİ BİLGİLERİNİZLE DEĞİŞTİRİN)
+        const SUPABASE_URL = 'https://rczkijbyhspdkybjqysz.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_E-KV57Nb7zaB-yEUe7NwUw_PlIcB-Ce';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        function showMessage(text, isError = true) {
+            const msgDiv = document.getElementById('message');
+            msgDiv.innerHTML = `<div class="${isError ? 'error' : 'success'}">${text}</div>`;
+            setTimeout(() => { msgDiv.innerHTML = ''; }, 3000);
+        }
+        
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            if (!email || !password) { showMessage('Lütfen e-posta ve şifre girin!'); return; }
+            
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) { showMessage('❌ Giriş başarısız: ' + error.message); }
+            else {
+                showMessage('✅ Giriş başarılı! Yönlendiriliyorsunuz...', false);
+                localStorage.setItem('supabase_session', JSON.stringify(data.session));
+                setTimeout(() => { window.location.href = 'dashboard.html'; }, 1000);
+            }
+        }
+        
+        async function signup() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            if (!email || !password) { showMessage('Lütfen e-posta ve şifre girin!'); return; }
+            if (password.length < 6) { showMessage('Şifre en az 6 karakter olmalıdır!'); return; }
+            
+            const { data, error } = await supabase.auth.signUp({ email, password });
+            if (error) { showMessage('❌ Kayıt başarısız: ' + error.message); }
+            else {
+                showMessage('✅ Kayıt başarılı! Şimdi giriş yapabilirsiniz.', false);
+                document.getElementById('password').value = '';
+            }
+        }
+        
+        window.onload = async () => {
+            const session = localStorage.getItem('supabase_session');
+            if (session) {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) { window.location.href = 'dashboard.html'; }
+            }
+        };
+    </script>
+</body>
+</html>
