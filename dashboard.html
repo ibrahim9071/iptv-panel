@@ -17,7 +17,7 @@
         input, select { width: calc(100% - 22px); padding: 12px; margin: 8px 0; background: #2a2a2a; border: 1px solid #444; border-radius: 8px; color: white; }
         button { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; margin: 8px 5px; }
         .delete-btn { background: #dc3545; }
-        .channel-item { background: #2a2a2a; padding: 15px; margin: 10px 0; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .channel-item { background: #2a2a2a; padding: 15px; margin: 10px 0; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
         .channel-name { font-size: 18px; font-weight: bold; }
         .channel-url { font-size: 12px; color: #888; margin-top: 5px; word-break: break-all; }
         .category-badge { background: #667eea; padding: 3px 10px; border-radius: 15px; font-size: 11px; margin-left: 10px; }
@@ -26,10 +26,11 @@
         .filter-btn.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
         .m3u-link { background: #2a2a2a; padding: 15px; border-radius: 10px; margin: 15px 0; }
         .m3u-link input { width: 100%; background: #1e1e1e; border: 1px solid #667eea; }
-        pre { background: #2a2a2a; padding: 15px; border-radius: 10px; overflow-x: auto; font-size: 12px; max-height: 300px; }
+        pre { background: #2a2a2a; padding: 15px; border-radius: 10px; overflow-x: auto; font-size: 12px; max-height: 300px; overflow-y: auto; }
         .empty-state { text-align: center; padding: 40px; color: #888; }
         .auto-refresh { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
         .auto-refresh input { width: auto; }
+        @media (max-width: 768px) { .channel-item { flex-direction: column; } .channel-actions { margin-top: 10px; } }
     </style>
 </head>
 <body>
@@ -47,9 +48,10 @@
                 <option value="Film">🎬 Film</option>
                 <option value="Müzik">🎵 Müzik</option>
                 <option value="Belgesel">🌍 Belgesel</option>
+                <option value="Çocuk">🧸 Çocuk</option>
             </select>
-            <input type="text" id="channelName" placeholder="Kanal Adı">
-            <input type="text" id="channelUrl" placeholder="Stream URL">
+            <input type="text" id="channelName" placeholder="Kanal Adı (örn: TRT 1)">
+            <input type="text" id="channelUrl" placeholder="Stream URL (m3u8, mp4, ts)">
             <button onclick="addChannel()">✅ Kanal Ekle</button>
         </div>
         
@@ -60,13 +62,16 @@
                 <button class="filter-btn" data-category="Spor">⚽ Spor</button>
                 <button class="filter-btn" data-category="Haber">📰 Haber</button>
                 <button class="filter-btn" data-category="Film">🎬 Film</button>
+                <button class="filter-btn" data-category="Müzik">🎵 Müzik</button>
+                <button class="filter-btn" data-category="Belgesel">🌍 Belgesel</button>
+                <button class="filter-btn" data-category="Çocuk">🧸 Çocuk</button>
             </div>
             <div id="channelList"></div>
         </div>
         
         <div class="card">
             <h2>🔗 M3U Çıkışı</h2>
-            <button onclick="generateAndSaveM3U()">🔄 M3U Oluştur</button>
+            <button onclick="generateAndSaveM3U()">🔄 M3U Oluştur ve Kaydet</button>
             <button onclick="downloadM3U()">📥 M3U İndir</button>
             <button onclick="copyM3ULink()">📋 Linki Kopyala</button>
             <div id="m3uLink" class="m3u-link"></div>
@@ -74,21 +79,22 @@
                 <input type="checkbox" id="autoRefresh" onchange="toggleAutoRefresh()">
                 <label>⏱️ Her 5 dakikada bir otomatik yenile</label>
             </div>
+            <p id="lastRefresh" style="margin-top: 10px; color: #888; font-size: 12px;"></p>
             <pre id="m3uOutput"></pre>
         </div>
     </div>
 
     <script>
         // ============================================
-        // 🔴 KENDİ SUPABASE BİLGİLERİNİZLE DEĞİŞTİRİN!
+        // SUPABASE BİLGİLERİNİZ (Değiştirmeyin)
         // ============================================
         const SUPABASE_URL = 'https://rczkijbyhspdkybjqysz.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_E-KV57Nb7zaB-yEUe7NwUw_PlIcB-Ce';
         
         // ============================================
-        // 🔴 CLOUDFLARE WORKER URL'NİZİ GÜNCELLEYİN!
+        // ✅ CLOUDFLARE WORKER URL'NİZ (GÜNCELLENDİ!)
         // ============================================
-        const WORKER_URL = 'https://iptv-proxy.xxxxxxxxxx.workers.dev';  // ← Worker URL'niz!
+        const WORKER_URL = 'https://iptv-proxy.infinitypo35.workers.dev';
         const SECRET_TOKEN = 'benimgizlitokenim123';
         
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -126,45 +132,80 @@
             if (!container) return;
             const filtered = currentFilter === 'all' ? channels : channels.filter(ch => ch.category === currentFilter);
             if (filtered.length === 0) {
-                container.innerHTML = '<div class="empty-state">📭 Henüz kanal eklenmemiş</div>';
+                container.innerHTML = '<div class="empty-state">📭 Henüz kanal eklenmemiş. Yukarıdan ekleyin!</div>';
                 return;
             }
             container.innerHTML = filtered.map(ch => `
                 <div class="channel-item">
-                    <div>
-                        <span class="channel-name">${ch.name}</span>
+                    <div style="flex:1">
+                        <span class="channel-name">${escapeHtml(ch.name)}</span>
                         <span class="category-badge">${ch.category || 'Genel'}</span>
-                        <div class="channel-url">${ch.url}</div>
+                        <div class="channel-url">${escapeHtml(ch.url)}</div>
                     </div>
-                    <button onclick="deleteChannel(${ch.id})" class="delete-btn">🗑️ Sil</button>
+                    <div class="channel-actions">
+                        <button onclick="testChannel('${escapeHtml(ch.url)}')">▶️ Test</button>
+                        <button onclick="deleteChannel(${ch.id})" class="delete-btn">🗑️ Sil</button>
+                    </div>
                 </div>
             `).join('');
+        }
+        
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
         }
         
         async function addChannel() {
             const name = document.getElementById('channelName')?.value;
             const url = document.getElementById('channelUrl')?.value;
             const category = document.getElementById('category')?.value;
-            if (!name || !url) { alert('Kanal adı ve URL gerekli!'); return; }
-            const { error } = await supabase.from('channels').insert([{ user_id: currentUser.id, name, url, category }]);
-            if (error) alert('Hata: ' + error.message);
-            else { await loadChannels(); await generateAndSaveM3U(); document.getElementById('channelName').value = ''; document.getElementById('channelUrl').value = ''; }
+            if (!name || !url) { alert('Kanal adı ve URL zorunludur!'); return; }
+            const { error } = await supabase.from('channels').insert([{ user_id: currentUser.id, name, url, category: category || 'Genel' }]);
+            if (error) { alert('Ekleme başarısız: ' + error.message); }
+            else {
+                await loadChannels();
+                await generateAndSaveM3U();
+                document.getElementById('channelName').value = '';
+                document.getElementById('channelUrl').value = '';
+                alert('✅ Kanal başarıyla eklendi!');
+            }
         }
         
         async function deleteChannel(id) {
-            if (!confirm('Silmek istediğinize emin misiniz?')) return;
+            if (!confirm('Bu kanalı silmek istediğinize emin misiniz?')) return;
             const { error } = await supabase.from('channels').delete().eq('id', id);
-            if (error) alert('Hata: ' + error.message);
-            else { await loadChannels(); await generateAndSaveM3U(); }
+            if (error) { alert('Silme başarısız: ' + error.message); }
+            else {
+                await loadChannels();
+                await generateAndSaveM3U();
+                alert('✅ Kanal silindi!');
+            }
         }
         
         async function generateAndSaveM3U() {
+            if (channels.length === 0) {
+                document.getElementById('m3uOutput').innerText = '#EXTM3U\n# Henüz kanal eklenmemiş';
+                return;
+            }
             let m3uContent = '#EXTM3U\n';
-            channels.forEach(ch => { m3uContent += `#EXTINF:-1 group-title="${ch.category || 'Genel'}", ${ch.name}\n${ch.url}\n`; });
+            channels.forEach(ch => {
+                m3uContent += `#EXTINF:-1 group-title="${ch.category || 'Genel'}", ${ch.name}\n${ch.url}\n`;
+            });
+            
             const m3uLink = `${WORKER_URL}/m3u?user=${currentUser.id}&token=${SECRET_TOKEN}`;
-            await supabase.from('playlists').upsert([{ user_id: currentUser.id, name: 'main', m3u_content: m3uContent, last_generated: new Date() }]);
-            document.getElementById('m3uOutput').innerText = m3uContent;
-            document.getElementById('m3uLink').innerHTML = `<strong>🔗 M3U Linki:</strong><input type="text" value="${m3uLink}" readonly onclick="this.select()">`;
+            
+            const { error } = await supabase.from('playlists').upsert([{ user_id: currentUser.id, name: 'main', m3u_content: m3uContent, last_generated: new Date() }]);
+            if (error) { console.error('M3U kaydedilemedi:', error); }
+            else {
+                document.getElementById('m3uOutput').innerText = m3uContent;
+                document.getElementById('m3uLink').innerHTML = `<strong>🔗 M3U Linkiniz (IPTV playerınıza ekleyin):</strong><br><input type="text" value="${m3uLink}" readonly onclick="this.select()" style="width:100%; padding:8px; margin-top:5px;"><small>⚠️ Bu linki kimseyle paylaşmayın! Token ile korunmaktadır.</small>`;
+                document.getElementById('lastRefresh').innerText = `Son yenileme: ${new Date().toLocaleString()}`;
+            }
         }
         
         function downloadM3U() {
@@ -179,7 +220,12 @@
         
         function copyM3ULink() {
             const input = document.querySelector('.m3u-link input');
-            if (input) { input.select(); document.execCommand('copy'); alert('✅ Link kopyalandı!'); }
+            if (input) { input.select(); document.execCommand('copy'); alert('✅ M3U linki kopyalandı!'); }
+            else { alert('Önce M3U oluşturun!'); }
+        }
+        
+        function testChannel(url) {
+            window.open(url, '_blank');
         }
         
         function toggleAutoRefresh() {
@@ -213,7 +259,8 @@
         
         async function logout() {
             await supabase.auth.signOut();
-            localStorage.clear();
+            localStorage.removeItem('supabase_session');
+            localStorage.removeItem('autoRefresh');
             window.location.href = 'login.html';
         }
     </script>
