@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPTV Panel</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>📺 IPTV Panel Yöneticisi</h1>
+        
+        <div class="card">
+            <h2>➕ Yeni Kanal Ekle</h2>
+            <input type="text" id="channelName" placeholder="Kanal Adı">
+            <input type="text" id="channelUrl" placeholder="Stream URL (m3u8, ts, mp4)">
+            <button onclick="addChannel()">Ekle</button>
+        </div>
+
+        <div class="card">
+            <h2>📡 Kanal Listesi</h2>
+            <div id="channelList"></div>
+        </div>
+
+        <div class="card">
+            <h2>🔗 M3U Çıkışı</h2>
+            <button onclick="generateM3U()">M3U Oluştur</button>
+            <pre id="m3uOutput"></pre>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
